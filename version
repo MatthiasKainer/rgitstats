@@ -23,7 +23,8 @@ if [ -z "$new_version" ]; then
     exit 1
 fi
 
-sed -i "s/$current_version/$new_version/g" Cargo.toml readme.md
+sed -i "s/version = "$current_version"/version = "$new_version"/g" Cargo.toml
+sed -i "s/$current_version/$new_version/g" readme.md
 cargo build
 git add Cargo.toml Cargo.lock readme.md && git commit -m"build: release new version $new_version" && git tag $new_version
 
