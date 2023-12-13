@@ -2,6 +2,18 @@
 
 An application that generates simple stats from your conventional commits
 
+## Install
+
+```bash
+RELEASE_VERSION=0.1.0
+RELEASE_OS=x86_64-unknown-linux-gnu # or x86_64-apple-darwin
+curl -L -o rgitstats https://github.com/MatthiasKainer/rgitstats/releases/download/$RELEASE_VERSION/rgitstats-$RELEASE_VERSION-$RELEASE_OS
+chmod +x rgitstats
+./rgitstats path/to/my/repo
+```
+
+You can also move it to you bin path from there to have it globally available
+
 ## Usage
 
 ```bash
