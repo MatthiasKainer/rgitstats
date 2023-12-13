@@ -104,10 +104,27 @@ fn to_table(values: Vec<(String, i32)>) {
     table.printstd();
 }
 
+fn pretty_print(display: &str, path: &PathBuf, result: Analysis) {
+    if display == "every" {
+        println!("{}", path.display());
+    }
+    if display == "every" || display == "types" {
+        to_table(sort_by_values(result.types));
+    }
+    if display == "every" || display == "authors" {
+        to_table(sort_by_values(result.authors));
+    }
+}
+
 fn cli() -> Command {
     Command::new("rgitstats")
         .about("Stats on git repos using semantic commits")
         .arg_required_else_help(true)
+        .arg(
+            arg!(--result <RESULT>)
+                .value_parser(["types", "scope", "authors", "every"])
+                .default_value("every"),
+        )
         .arg(arg!(<PATH> ... "Git repo(s) to check").value_parser(clap::value_parser!(PathBuf)))
 }
 
@@ -118,6 +135,10 @@ fn main() {
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
+    let display = matches
+        .get_one::<String>("result")
+        .map(|s| s.as_str())
+        .expect("defaulted...");
     for path in paths {
         let history = match Repository::open(path) {
             Ok(it) => indy_jones_that_repo(it),
@@ -135,9 +156,7 @@ fn main() {
 
         match parse_entries(history.unwrap()) {
             Ok(it) => {
-                println!("{}", path.display());
-                to_table(sort_by_values(it.types));
-                to_table(sort_by_values(it.authors));
+                pretty_print(display, path, it);
             }
             Err(err) => {
                 println!("Failed to read history. Is it following conventional commits?");
