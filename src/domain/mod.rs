@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub(crate) struct Commit {
     pub(crate) message: String,
     pub(crate) author: String,

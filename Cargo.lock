@@ -568,6 +568,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "git2",
+ "is-terminal",
  "predicates",
  "prettytable",
  "shiba",

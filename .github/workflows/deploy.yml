@@ -35,7 +35,7 @@ jobs:
       - name: Get the commits
         shell: bash
         run: | 
-          echo "BODY=$(git log --pretty=format:'%an: %s' $(git describe --tags --abbrev=0 0.1.1^)...0.1.1)" >> $GITHUB_ENV
+          echo "BODY=$(git log --pretty=format:'%an: %s' $(git describe --tags --abbrev=0 $VERSION^)...$VERSION)" >> $GITHUB_ENV
 
       - name: Install Rust
         # Or @nightly if you want

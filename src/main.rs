@@ -1,6 +1,11 @@
-use std::path::PathBuf;
+use domain::Commit;
+use is_terminal::IsTerminal as _;
+use std::{
+    io::{stdin, BufRead, BufReader},
+    path::PathBuf,
+};
 
-use clap::{arg, Command};
+use clap::{arg, Arg, ArgAction, Command};
 
 mod domain;
 mod git;
@@ -13,10 +18,26 @@ use git2::Repository;
 
 fn cli() -> Command {
     Command::new("rgitstats")
-        .about("Stats on git repos using semantic commits")
+        .about(
+            "Stats on git repos using semantic commits
+        
+Can be sent into machine mode by passing data via stdin, then the Directories 
+are expected from stdin.
+
+Example: ls -d /home/mkainer/projects/* | cargo run -- -s --result scope -
+
+As soon as data is passed via stdin, the output will be machine (`grep`, `awk`...) readable, not
+human readable. ",
+        )
         .arg_required_else_help(true)
         .arg(
-            arg!(--result <RESULT>)
+            Arg::new("coe")
+            .short('s')
+            .long("skip-non-git")
+            .action(ArgAction::SetTrue)
+            .help("Will continue if there if one of the passed directories is not a valid git directory")
+        ).arg(
+            arg!(-r --result <RESULT>)
                 .value_parser(["types", "scope", "authors", "every"])
                 .default_value("types"),
         )
@@ -30,10 +51,61 @@ fn main() {
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
+
     let display = matches
         .get_one::<String>("result")
         .map(|s| s.as_str())
         .expect("defaulted...");
+
+    let continue_on_err = matches.get_flag("coe");
+    if paths.first() == Some(&&PathBuf::from("-")) {
+        machine_mode(display, continue_on_err);
+    } else {
+        user_mode(display, paths);
+    }
+}
+
+fn machine_mode(display: &str, continue_on_err: bool) {
+    if stdin().is_terminal() {
+        cli().print_help().unwrap();
+        std::process::exit(2);
+    }
+
+    let mut full_history: Vec<Commit> = vec![];
+
+    for line in BufReader::new(stdin().lock()).lines() {
+        let history = match Repository::open(PathBuf::from(line.unwrap())) {
+            Ok(it) => git::indy_jones_that_repo(it),
+            Err(err) => {
+                if !continue_on_err {
+                    eprintln!("Failed to open repo. Is it a valid git repository?");
+                    eprintln!("{}", err.message());
+                    std::process::exit(1);
+                }
+                Ok(vec![])
+            }
+        };
+
+        if history.is_err() {
+            eprintln!("Failed to retrieve history.");
+            std::process::exit(1);
+        }
+        full_history.extend(history.unwrap());
+    }
+
+    match parser::parse_entries(full_history) {
+        Ok(it) => {
+            io::machine_print(display, it);
+        }
+        Err(err) => {
+            eprintln!("Failed to read history. Is it following conventional commits?");
+            eprintln!("{}", err);
+            std::process::exit(1);
+        }
+    };
+}
+
+fn user_mode(display: &str, paths: Vec<&PathBuf>) {
     for path in paths {
         let history = match Repository::open(path) {
             Ok(it) => git::indy_jones_that_repo(it),

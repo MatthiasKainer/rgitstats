@@ -18,12 +18,27 @@ You can also move it to you bin path from there to have it globally available
 
 Usage: rgitstats [OPTIONS] \<PATH>...
 
+Can be sent into machine mode by passing data via stdin, then the Directories 
+are expected from stdin.
+
+Example: 
+
+```bash
+ls -d /home/mkainer/projects/* | cargo run -- -s --result authors - | grep Kainer
+Kainer, Matthias 341
+Matthias Kainer 116
+```
+
+As soon as data is passed via stdin, the output will be machine (`grep`, `awk`...) readable, not
+human readable. 
+
 ### Arguments:
   \<PATH>...  Git repo(s) to check
 
 ### Options:
-* --result <RESULT>  [default: types] [possible values: types, scope, authors, every]
-* -h, --help             Print help
+*  -s, --skip-non-git     Will continue if there if one of the passed directories is not a valid git directory
+*  -r, --result <RESULT>  [default: types] [possible values: types, scope, authors, every]
+*  -h, --help             Print help
 
 ```bash
 rgiststats path/to/my/repo

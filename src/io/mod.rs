@@ -85,3 +85,33 @@ pub(crate) fn pretty_print(display: &str, path: &PathBuf, result: Analysis) {
         to_scope_table(result.scope);
     }
 }
+
+fn to_line(values: Vec<(String, u32)>) {
+    for value in values {
+        println!("{} {}", value.0, value.1)
+    }
+}
+
+fn to_scope_line(values: Scope) {
+    for value in values {
+        let (scope, types) = value;
+        for type_ in types.1 {
+            let (type_name, authors) = type_;
+            for (author, count) in authors.1 {
+                println!("{} {} {} {}", scope, type_name, author, count);
+            }
+        }
+    }
+}
+
+pub(crate) fn machine_print(display: &str, result: Analysis) {
+    if display == "types" {
+        to_line(sort_by_values(result.types));
+    }
+    if display == "authors" {
+        to_line(sort_by_values(result.authors));
+    }
+    if display == "scope" {
+        to_scope_line(result.scope);
+    }
+}

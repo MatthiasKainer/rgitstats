@@ -16,4 +16,5 @@ predicates = "3.0.4"
 [dependencies]
 clap = "4.4.11"
 git2 = "0.18.1"
+is-terminal = "0.4.9"
 prettytable = "0.10.0"
