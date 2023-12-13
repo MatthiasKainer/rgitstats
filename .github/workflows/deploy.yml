@@ -32,6 +32,10 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
+      - name: Install openssl support
+        shell: bash
+        run: apt install -y libssl-dev pkg-confi
+
       - name: Install Rust
         # Or @nightly if you want
         uses: dtolnay/rust-toolchain@stable
