@@ -1,6 +1,6 @@
 [package]
 name = "rgitstats"
-version = "0.1.2"
+version = "0.1.4"
 homepage = "https://github.com/matthiaskainer/rgitstats"
 repository = "https://github.com/matthiaskainer/rgitstats"
 license-file = "LICENSE"
