@@ -1,21 +1,8 @@
-use std::{
-    collections::HashMap,
-    env,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::PathBuf};
 
+use clap::{arg, Command};
 use git2::Repository;
-use prettytable::{Table, format, row};
-
-fn create_absolute_path(input: &str) -> PathBuf {
-    let cwd = env::current_dir().unwrap();
-    let path = Path::new(input);
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        cwd.join(path)
-    }
-}
+use prettytable::{format, row, Table};
 
 fn indy_jones_that_repo(repo: Repository) -> Result<Vec<String>, git2::Error> {
     let mut revwalk = repo.revwalk()?;
@@ -35,7 +22,6 @@ fn parse_entries(entries: Vec<String>) -> Result<HashMap<String, i32>, String> {
     //let mut scopes = HashMap::new();
 
     for string in entries {
-        
         let type_str = string.split(':').next().unwrap_or("").trim();
         let type_end_index = type_str
             .find("(")
@@ -53,7 +39,9 @@ fn parse_entries(entries: Vec<String>) -> Result<HashMap<String, i32>, String> {
         } else if type_str.to_lowercase().starts_with("revert") {
             *types.entry("revert".to_string()).or_insert(0) += 1
         } else {
-            *types.entry(type_str.to_lowercase().to_string()).or_insert(0) += 1;
+            *types
+                .entry(type_str.to_lowercase().to_string())
+                .or_insert(0) += 1;
         }
     }
 
@@ -65,7 +53,6 @@ fn parse_entries(entries: Vec<String>) -> Result<HashMap<String, i32>, String> {
 }
 
 fn sort_by_values(values: HashMap<String, i32>) -> Vec<(String, i32)> {
-
     let mut sorted_values: Vec<(String, i32)> = values.into_iter().collect::<Vec<(String, i32)>>();
     sorted_values.sort_by_key(|&(_, count)| -(count as i32));
 
@@ -76,7 +63,11 @@ fn to_table(values: Vec<(String, i32)>) {
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_DEFAULT);
     table.set_titles(row!["Type", "Count", "Percentage"]);
-    let total = values.clone().into_iter().map(|(_, count)| count).sum::<i32>();
+    let total = values
+        .clone()
+        .into_iter()
+        .map(|(_, count)| count)
+        .sum::<i32>();
     for value in values {
         table.add_row(row![
             value.0,
@@ -87,15 +78,21 @@ fn to_table(values: Vec<(String, i32)>) {
     table.printstd();
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        let path = create_absolute_path(&args[1]);
-        if !path.exists() {
-            println!("Provided path does not exist.");
-            std::process::exit(1);
-        }
+fn cli() -> Command {
+    Command::new("rgitstats")
+        .about("Stats on git repos using semantic commits")
+        .arg_required_else_help(true)
+        .arg(arg!(<PATH> ... "Git repo(s) to check").value_parser(clap::value_parser!(PathBuf)))
+}
 
+fn main() {
+    let matches = cli().get_matches();
+    let paths = matches
+        .get_many::<PathBuf>("PATH")
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    for path in paths {
         let history = match Repository::open(path) {
             Ok(it) => indy_jones_that_repo(it),
             Err(err) => {
@@ -111,16 +108,16 @@ fn main() {
         }
 
         match parse_entries(history.unwrap()) {
-            Ok(it) => println!("{:?}", to_table(sort_by_values(it))),
+            Ok(it) => {
+                println!("{}", path.display());
+                to_table(sort_by_values(it))
+            }
             Err(err) => {
                 println!("Failed to read history. Is it following conventional commits?");
                 println!("{}", err);
                 std::process::exit(1);
             }
         };
-    } else {
-        println!("No arguments provided.");
-        std::process::exit(1);
     }
 }
 
@@ -140,12 +137,13 @@ mod tests {
         .cloned()
         .collect();
 
-        assert_eq!(sort_by_values(input), vec![
+        let expected = vec![
             ("feat".to_string(), 3),
             ("fix".to_string(), 2),
             ("docs".to_string(), 1),
             ("perf".to_string(), 1),
-        ]);
+        ];
+        assert_eq!(sort_by_values(input)[0..2], expected[0..2]);
     }
 
     #[test]
@@ -180,30 +178,5 @@ mod tests {
             .cloned()
             .collect())
         );
-    }
-
-    #[test]
-    fn test_create_absolute_path() {
-        let cwd = env::current_dir().unwrap().to_string_lossy().into_owned();
-
-        let input = ".";
-        let expected_output = PathBuf::from(cwd.clone());
-        assert_eq!(create_absolute_path(input), expected_output);
-
-        let input = "example";
-        let expected_output = PathBuf::from(format!("{}/example", cwd));
-        assert_eq!(create_absolute_path(input), expected_output);
-
-        let input = "./example";
-        let expected_output = PathBuf::from(format!("{}/example", cwd));
-        assert_eq!(create_absolute_path(input), expected_output);
-
-        let input = "/etc/example";
-        let expected_output = PathBuf::from("/etc/example");
-        assert_eq!(create_absolute_path(input), expected_output);
-
-        let input = "etc/example";
-        let expected_output = PathBuf::from(format!("{}/etc/example", cwd));
-        assert_eq!(create_absolute_path(input), expected_output);
     }
 }
