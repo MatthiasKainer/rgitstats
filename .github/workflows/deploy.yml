@@ -32,6 +32,10 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
+      - name: Get the commits
+        shell: bash
+        run: echo "BODY=$(git log --pretty=format:'%an: %s' `git describe --tags --abbrev=0 0.1.1^`...0.1.1)" > $GITHUB_ENV
+
       - name: Install Rust
         # Or @nightly if you want
         uses: dtolnay/rust-toolchain@stable
@@ -58,10 +62,12 @@ jobs:
             echo "ASSET=$releasename.exe" > $GITHUB_ENV
           else
             mv "target/${{ matrix.target }}/release/$binary_name" "$releasename"
-            echo "ASSET=$releasename" >> $GITHUB_ENV
+            echo "ASSET=$releasename" > $GITHUB_ENV
           fi
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             ${{ env.ASSET }}
+          body: |
+            ${{ env.BODY }}

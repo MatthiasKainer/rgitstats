@@ -25,6 +25,6 @@ fi
 
 sed -i "s/$current_version/$new_version/g" Cargo.toml readme.md
 cargo build
-git add Cargo.toml readme.md && git commit -m"build: release new version $new_version" && git tag $new_version
+git add Cargo.toml Cargo.lock readme.md && git commit -m"build: release new version $new_version" && git tag $new_version
 
 echo "Updated from $current_version to $new_version successfully"
