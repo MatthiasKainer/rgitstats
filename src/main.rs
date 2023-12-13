@@ -4,52 +4,78 @@ use clap::{arg, Command};
 use git2::Repository;
 use prettytable::{format, row, Table};
 
-fn indy_jones_that_repo(repo: Repository) -> Result<Vec<String>, git2::Error> {
+struct Commit {
+    message: String,
+    author: String,
+}
+
+#[derive(Debug)]
+struct Analysis {
+    types: HashMap<String, i32>,
+    authors: HashMap<String, i32>,
+}
+
+fn indy_jones_that_repo(repo: Repository) -> Result<Vec<Commit>, git2::Error> {
     let mut revwalk = repo.revwalk()?;
     revwalk.push_head()?;
     revwalk.set_sorting(git2::Sort::TIME)?;
 
-    let mut string_list: Vec<String> = Vec::new();
+    let mut commit_list: Vec<Commit> = Vec::new();
     for oid in revwalk {
         let commit = repo.find_commit(oid?)?;
-        string_list.push(commit.summary().unwrap_or("").into());
+        commit_list.push(Commit {
+            message: commit.summary().unwrap_or("").into(),
+            author: commit.author().name().unwrap_or("").into(),
+        });
     }
-    Ok(string_list)
+    Ok(commit_list)
 }
 
-fn parse_entries(entries: Vec<String>) -> Result<HashMap<String, i32>, String> {
+fn parse_entries(entries: Vec<Commit>) -> Result<Analysis, String> {
     let mut types = HashMap::new();
+    let mut authors = HashMap::new();
     //let mut scopes = HashMap::new();
 
-    for string in entries {
-        let type_str = string.split(':').next().unwrap_or("").trim();
-        let type_end_index = type_str
-            .find("(")
-            .unwrap_or(string.find(":").unwrap_or(usize::MAX));
-
-        if type_end_index == usize::MAX {
+    for entry in entries {
+        let message = entry.message;
+        let commit_type = get_types(message);
+        if commit_type == "".to_string() {
             continue;
         }
 
-        let type_str = &string[0..type_end_index];
-
-        // there might be a number of merge-spam messages in there
-        if type_str.to_lowercase().starts_with("merge") {
-            *types.entry("merge".to_string()).or_insert(0) += 1
-        } else if type_str.to_lowercase().starts_with("revert") {
-            *types.entry("revert".to_string()).or_insert(0) += 1
-        } else {
-            *types
-                .entry(type_str.to_lowercase().to_string())
-                .or_insert(0) += 1;
+        *types
+            .entry(commit_type.to_lowercase().to_string())
+            .or_insert(0) += 1;
+        if entry.author != "" {
+            *authors.entry(entry.author).or_insert(0) += 1
         }
     }
 
     if types.is_empty() {
         Err("No types found".to_string())
     } else {
-        Ok(types)
+        Ok(Analysis { types, authors })
     }
+}
+
+fn get_types(message: String) -> String {
+    let type_str = message.split(':').next().unwrap_or("").trim();
+    let type_end_index = type_str
+        .find("(")
+        .unwrap_or(message.find(":").unwrap_or(usize::MAX));
+
+    if type_end_index == usize::MAX {
+        return "".to_string();
+    }
+
+    let type_str = &message[0..type_end_index];
+    return if type_str.to_lowercase().starts_with("merge") {
+        "merge".to_string()
+    } else if type_str.to_lowercase().starts_with("revert") {
+        "revert".to_string()
+    } else {
+        type_str.to_lowercase().to_string()
+    };
 }
 
 fn sort_by_values(values: HashMap<String, i32>) -> Vec<(String, i32)> {
@@ -110,7 +136,8 @@ fn main() {
         match parse_entries(history.unwrap()) {
             Ok(it) => {
                 println!("{}", path.display());
-                to_table(sort_by_values(it))
+                to_table(sort_by_values(it.types));
+                to_table(sort_by_values(it.authors));
             }
             Err(err) => {
                 println!("Failed to read history. Is it following conventional commits?");
@@ -164,9 +191,16 @@ mod tests {
             "fix(perf): fixed broken app".to_string(),
             "docs: improved readme".to_string(),
             "feat(core): added more stuff".to_string(),
-        ];
+        ]
+        .into_iter()
+        .map(|line| Commit {
+            message: line,
+            author: "Matthias Kainer".to_string(),
+        })
+        .collect();
+        let Analysis { types, authors } = parse_entries(strings).unwrap();
         assert_eq!(
-            parse_entries(strings.clone()).unwrap(),
+            types,
             ([
                 ("feat".to_string(), 3),
                 ("fix".to_string(), 2),
@@ -177,6 +211,13 @@ mod tests {
             .iter()
             .cloned()
             .collect())
+        );
+        assert_eq!(
+            authors,
+            ([("Matthias Kainer".to_string(), 9),]
+                .iter()
+                .cloned()
+                .collect())
         );
     }
 }
