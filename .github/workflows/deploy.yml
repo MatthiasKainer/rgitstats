@@ -18,7 +18,7 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+            target: x86_64-unknown-linux-gnu
 
           - build: macos
             os: macos-latest
@@ -31,10 +31,6 @@ jobs:
       - name: Get the release version from the tag
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-
-      - name: Install openssl support
-        shell: bash
-        run: apt install -y libssl-dev pkg-confi
 
       - name: Install Rust
         # Or @nightly if you want
@@ -54,7 +50,7 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          binary_name="rgiststats"
+          binary_name="rgitstats"
 
           releasename="$binary_name-${{ env.VERSION }}-${{ matrix.target }}"
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
