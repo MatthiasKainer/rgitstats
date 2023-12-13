@@ -11,13 +11,20 @@ pub(crate) struct ParsedScope {
     pub(crate) author: Option<String>,
 }
 
-pub(crate) type Scope = HashMap<
+pub(crate) type PreparedScope = HashMap<
     String,
     (
         u32,
         HashMap<String, (u32, std::collections::HashMap<String, u32>)>,
     ),
 >;
+pub(crate) type Scope = Vec<(
+    String,
+    (
+        u32,
+        HashMap<String, (u32, std::collections::HashMap<String, u32>)>,
+    ),
+)>;
 
 #[derive(Debug)]
 pub(crate) struct Analysis {

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use crate::{
-    domain::{Analysis, Commit, ParsedScope, Scope},
+    domain::{Analysis, Commit, ParsedScope, PreparedScope, Scope},
     strings::some_string,
 };
 
 pub(crate) fn parse_entries(entries: Vec<Commit>) -> Result<Analysis, String> {
     let mut types = HashMap::new();
     let mut authors = HashMap::new();
-    let mut scopes = Scope::new();
+    let mut scopes = PreparedScope::new();
 
     for entry in entries {
         let message = entry.message;
@@ -37,18 +37,25 @@ pub(crate) fn parse_entries(entries: Vec<Commit>) -> Result<Analysis, String> {
         }
     }
 
+    let mut vec_scopes: Vec<_> = scopes.iter().collect();
+    vec_scopes.sort_by(|k, v| v.1 .0.cmp(&k.1 .0));
+    let scope: Scope = vec_scopes
+        .into_iter()
+        .map(|entry| (entry.0.to_string(), entry.1.to_owned()))
+        .collect();
+
     if types.is_empty() {
         Err("No types found".to_string())
     } else {
         Ok(Analysis {
             types,
             authors,
-            scope: scopes,
+            scope,
         })
     }
 }
 
-fn add_to_scope(item: ParsedScope, scopes: &mut Scope) {
+fn add_to_scope(item: ParsedScope, scopes: &mut PreparedScope) {
     let (count, types) = scopes.entry(item.scope.clone()).or_insert((
         0,
         std::collections::HashMap::<String, (u32, std::collections::HashMap<String, u32>)>::new(),
@@ -161,7 +168,7 @@ mod tests {
                 author: Some("author3".to_string()),
             },
         ];
-        let mut scope = Scope::new();
+        let mut scope = PreparedScope::new();
         for parsed_scope in vec {
             add_to_scope(parsed_scope, &mut scope);
         }
