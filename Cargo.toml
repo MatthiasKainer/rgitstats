@@ -1,6 +1,6 @@
 [package]
 name = "rgitstats"
-version = "0.1.0"
+version = "0.1.1"
 homepage = "https://github.com/matthiaskainer/rgitstats"
 repository = "https://github.com/matthiaskainer/rgitstats"
 license-file = "LICENSE"
@@ -9,7 +9,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dev-dependencies]
-shiba = "0.1.0"
+shiba = "0.1.1"
 
 [dependencies]
 clap = "4.4.11"
