@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cargo install rcop > /dev/null 2>&1
+
+cat "$1" | rcop
